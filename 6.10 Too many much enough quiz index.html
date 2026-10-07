@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grammar quiz · enough / too much / too many</title>
+    <style>
+        /* ---------- color system ---------- */
+        :root {
+            --dark-blue: #292859;
+            --bright-blue: #31DFFF;
+            --pastel-blue: #D5F8FF;
+            --bright-purple: #784DFF;
+            --pastel-purple: #E8EBF5;
+            --light-grey: #F2F2F2;
+            --white: #FFFFFF;
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, var(--pastel-purple) 0%, #f9fafe 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            margin: 0;
+        }
+
+        .quiz-container {
+            max-width: 720px;
+            width: 100%;
+            background: var(--white);
+            border-radius: 2.5rem;
+            box-shadow: var(--shadow-md), 0 2px 0 0 rgba(41, 40, 89, 0.05);
+            padding: 2.5rem 2.2rem;
+            transition: all 0.2s ease;
+        }
+
+        /* ---------- header & progress ---------- */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .progress-badge {
+            background: var(--pastel-purple);
+            color: var(--dark-blue);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.45rem 1.1rem;
+            border-radius: 3rem;
+            letter-spacing: 0.02em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: 1px solid rgba(120, 77, 255, 0.15);
+        }
+
+        .progress-badge span {
+            color: var(--bright-purple);
+            font-weight: 700;
+        }
+
+        .score-badge {
+            background: var(--pastel-blue);
+            color: var(--dark-blue);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.45rem 1.1rem;
+            border-radius: 3rem;
+            border: 1px solid rgba(49, 223, 255, 0.2);
+        }
+
+        /* ---------- question card ---------- */
+        .question-card {
+            background: var(--light-grey);
+            border-radius: 2rem;
+            padding: 2rem 2rem 1.8rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(41, 40, 89, 0.04);
+            transition: background 0.2s;
+            box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.8), var(--shadow-sm);
+        }
+
+        .task-text {
+            font-size: 1.65rem;
+            font-weight: 600;
+            line-height: 1.4;
+            color: var(--dark-blue);
+            margin-bottom: 1.6rem;
+            word-break: break-word;
+        }
+
+        .task-text .blank {
+            display: inline-block;
+            min-width: 2.4rem;
+            border-bottom: 3px solid var(--bright-blue);
+            color: var(--bright-purple);
+            font-weight: 700;
+            text-align: center;
+            margin: 0 0.15rem;
+        }
+
+        /* ---------- options ---------- */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            margin: 1.8rem 0 1.2rem;
+        }
+
+        .option-btn {
+            background: var(--white);
+            border: 2px solid transparent;
+            border-radius: 2rem;
+            padding: 1rem 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--dark-blue);
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            letter-spacing: 0.01em;
+            width: 100%;
+            border: 1.5px solid rgba(41, 40, 89, 0.08);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: var(--pastel-blue);
+            border-color: var(--bright-blue);
+            transform: scale(1.005);
+            box-shadow: 0 8px 18px rgba(49, 223, 255, 0.15);
+        }
+
+        .option-btn.selected {
+            background: var(--pastel-blue);
+            border-color: var(--bright-purple);
+            box-shadow: 0 0 0 2px rgba(120, 77, 255, 0.2);
+        }
+
+        .option-btn.correct {
+            background: #e6f9e6;
+            border-color: #2e9e5b;
+            color: #1b5e3a;
+            box-shadow: 0 0 0 2px rgba(46, 158, 91, 0.1);
+        }
+
+        .option-btn.wrong {
+            background: #ffe9e9;
+            border-color: #d14545;
+            color: #9b2c2c;
+            box-shadow: 0 0 0 2px rgba(209, 69, 69, 0.1);
+        }
+
+        .option-btn:disabled {
+            cursor: default;
+            opacity: 0.9;
+        }
+
+        .option-letter {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 50%;
+            background: var(--pastel-purple);
+            color: var(--dark-blue);
+            font-weight: 700;
+            font-size: 1rem;
+            flex-shrink: 0;
+            transition: 0.1s;
+        }
+
+        .option-btn.correct .option-letter {
+            background: #2e9e5b;
+            color: white;
+        }
+
+        .option-btn.wrong .option-letter {
+            background: #d14545;
+            color: white;
+        }
+
+        /* ---------- feedback & actions ---------- */
+        .feedback-area {
+            display: flex;
+            align-items: center;
+            min-height: 3rem;
+            margin: 0.8rem 0 1.2rem;
+        }
+
+        .feedback-message {
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.6rem 1.2rem;
+            border-radius: 3rem;
+            background: var(--white);
+            border-left: 4px solid var(--bright-purple);
+            color: var(--dark-blue);
+            box-shadow: var(--shadow-sm);
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .feedback-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .feedback-message.correct-feedback {
+            border-left-color: #2e9e5b;
+            background: #f2fbf5;
+        }
+
+        .feedback-message.wrong-feedback {
+            border-left-color: #d14545;
+            background: #fff6f6;
+        }
+
+        .action-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.8rem;
+        }
+
+        .next-btn {
+            background: var(--dark-blue);
+            color: white;
+            border: none;
+            border-radius: 3rem;
+            padding: 0.9rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: 0.2s ease;
+            box-shadow: 0 6px 14px rgba(41, 40, 89, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .next-btn:hover:not(:disabled) {
+            background: #1f1e45;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(41, 40, 89, 0.25);
+        }
+
+        .next-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .next-btn .arrow {
+            font-size: 1.3rem;
+            line-height: 1;
+        }
+
+        /* ---------- completion screen ---------- */
+        .completion-card {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+        }
+
+        .completion-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--dark-blue);
+            margin-bottom: 0.75rem;
+        }
+
+        .completion-score {
+            font-size: 1.4rem;
+            background: var(--pastel-purple);
+            display: inline-block;
+            padding: 0.6rem 2rem;
+            border-radius: 4rem;
+            font-weight: 600;
+            color: var(--bright-purple);
+            margin: 1.2rem 0 1.8rem;
+        }
+
+        .restart-btn {
+            background: var(--bright-purple);
+            color: white;
+            border: none;
+            border-radius: 3rem;
+            padding: 0.9rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 6px 14px rgba(120, 77, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .restart-btn:hover {
+            background: #6538e0;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(120, 77, 255, 0.3);
+        }
+
+        /* ---------- responsive ---------- */
+        @media (max-width: 520px) {
+            .quiz-container {
+                padding: 1.8rem 1.3rem;
+                border-radius: 2rem;
+            }
+
+            .task-text {
+                font-size: 1.4rem;
+            }
+
+            .option-btn {
+                font-size: 1.05rem;
+                padding: 0.9rem 1.2rem;
+            }
+
+            .next-btn {
+                padding: 0.8rem 1.8rem;
+                font-size: 1rem;
+            }
+        }
+
+        /* accessibility outline */
+        .option-btn:focus-visible,
+        .next-btn:focus-visible,
+        .restart-btn:focus-visible {
+            outline: 3px solid var(--bright-blue);
+            outline-offset: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container" id="quizContainer">
+        <!-- dynamic content will be injected here -->
+    </div>
+
+    <script>
+        (function() {
+            // ---------- quiz data ----------
+            const questions = [
+                { task: "You have got … money to buy a car.", options: ["Enough", "Too many", "Too much"], answer: "Enough" },
+                { task: "There are … people on the street.", options: ["Too much", "Enough", "Too many"], answer: "Too many" },
+                { task: "Don't spend … time on computer games.", options: ["Too much", "Too many", "Enough"], answer: "Too much" },
+                { task: "My brother bought … apples, we don't know what to do with them.", options: ["Enough", "Too many", "Too much"], answer: "Too many" },
+                { task: "There is … butter in a sandwich, I can't eat it.", options: ["Enough", "Too much", "Too many"], answer: "Too much" },
+                { task: "Our teacher gave us … exercises for homework.", options: ["Too many", "Enough", "Too much"], answer: "Too many" },
+                { task: "There isn't … popcorn. Let's buy some more!", options: ["Too much", "Enough", "Too many"], answer: "Enough" },
+                { task: "I can't decide what to wear, I have … clothes.", options: ["Too much", "Too many", "Enough"], answer: "Too many" },
+                { task: "They didn't have … time, they worked a lot.", options: ["Too much", "Enough", "Too many"], answer: "Enough" },
+                { task: "My dad bought … vegetables. We made a big salad bowl.", options: ["Too much", "Enough", "Too many"], answer: "Enough" }
+            ];
+
+            // ---------- state ----------
+            let currentIndex = 0;                // 0-based index of current question
+            let score = 0;
+            let selectedOption = null;           // currently selected option text (before check)
+            let answered = false;                // whether current question has been checked
+
+            // DOM elements
+            const container = document.getElementById('quizContainer');
+
+            // ---------- helper: render current state ----------
+            function render() {
+                if (currentIndex >= questions.length) {
+                    renderCompletion();
+                    return;
+                }
+
+                const q = questions[currentIndex];
+                const total = questions.length;
+                const questionNumber = currentIndex + 1;
+
+                // build HTML
+                let html = `
+                    <div class="quiz-header">
+                        <div class="progress-badge">
+                            📘 Question <span>${questionNumber}</span> / ${total}
+                        </div>
+                        <div class="score-badge">
+                            ⭐ Score: ${score}
+                        </div>
+                    </div>
+                    <div class="question-card">
+                        <div class="task-text">
+                            ${q.task.replace(/…/g, '<span class="blank">______</span>')}
+                        </div>
+                        <div class="options-list" id="optionsList">
+                `;
+
+                // options
+                q.options.forEach((opt, idx) => {
+                    const letter = String.fromCharCode(65 + idx); // A, B, C
+                    let btnClass = 'option-btn';
+                    if (answered) {
+                        // highlight correct / wrong after checking
+                        if (opt === q.answer) {
+                            btnClass += ' correct';
+                        } else if (opt === selectedOption && opt !== q.answer) {
+                            btnClass += ' wrong';
+                        }
+                    } else {
+                        if (opt === selectedOption) {
+                            btnClass += ' selected';
+                        }
+                    }
+                    const disabledAttr = answered ? 'disabled' : '';
+                    html += `
+                        <button class="${btnClass}" data-option="${opt}" ${disabledAttr}>
+                            <span class="option-letter">${letter}</span>
+                            ${opt}
+                        </button>
+                    `;
+                });
+
+                html += `
+                        </div>
+                        <div class="feedback-area" id="feedbackArea">
+                            <div class="feedback-message" id="feedbackMessage"></div>
+                        </div>
+                        <div class="action-row">
+                            <button class="next-btn" id="nextBtn" ${!answered ? 'disabled' : ''}>
+                                ${currentIndex === total - 1 ? 'Finish' : 'Next'} <span class="arrow">→</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+
+                // attach event listeners after render
+                const optionButtons = document.querySelectorAll('.option-btn');
+                const nextBtn = document.getElementById('nextBtn');
+                const feedbackMessage = document.getElementById('feedbackMessage');
+                const feedbackArea = document.getElementById('feedbackArea');
+
+                // if already answered, set feedback message
+                if (answered) {
+                    const isCorrect = selectedOption === q.answer;
+                    feedbackMessage.textContent = isCorrect
+                        ? '✓ Correct! Well done.'
+                        : `✗ Not quite. The correct answer is “${q.answer}”.`;
+                    feedbackMessage.className = `feedback-message show ${isCorrect ? 'correct-feedback' : 'wrong-feedback'}`;
+
+                    // enable next button
+                    nextBtn.disabled = false;
+                } else {
+                    feedbackMessage.className = 'feedback-message';
+                    feedbackMessage.textContent = '';
+                }
+
+                // ----- option click handler -----
+                optionButtons.forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        if (answered) return; // already locked
+
+                        const chosen = this.dataset.option;
+
+                        // if same option clicked again, deselect (toggle)
+                        if (selectedOption === chosen) {
+                            selectedOption = null;
+                            // remove selected class from all
+                            optionButtons.forEach(b => b.classList.remove('selected'));
+                        } else {
+                            // remove selected from all, add to this
+                            optionButtons.forEach(b => b.classList.remove('selected'));
+                            this.classList.add('selected');
+                            selectedOption = chosen;
+                        }
+
+                        // enable/disable next button based on selection
+                        if (selectedOption) {
+                            nextBtn.disabled = false;
+                        } else {
+                            nextBtn.disabled = true;
+                        }
+                    });
+                });
+
+                // ----- next button handler (check answer & move forward) -----
+                nextBtn.addEventListener('click', function() {
+                    // if already answered, go to next question
+                    if (answered) {
+                        currentIndex++;
+                        selectedOption = null;
+                        answered = false;
+                        render();
+                        return;
+                    }
+
+                    // not answered yet: we need to check the answer
+                    if (!selectedOption) return; // disabled anyway
+
+                    const isCorrect = (selectedOption === q.answer);
+                    if (isCorrect) {
+                        score++;
+                    }
+
+                    // mark as answered
+                    answered = true;
+
+                    // re-render to show correct/wrong styles and feedback
+                    render();
+
+                    // now after re-render, the next button is enabled, and feedback is displayed
+                });
+            }
+
+            // ---------- render completion screen ----------
+            function renderCompletion() {
+                const total = questions.length;
+                const percentage = Math.round((score / total) * 100);
+                let message = '';
+                if (percentage === 100) message = '🏆 Perfect! You mastered it!';
+                else if (percentage >= 70) message = '🎉 Great job! Keep practising.';
+                else if (percentage >= 40) message = '📚 Good effort! Review the rules.';
+                else message = '💪 Keep learning — you\'ll get there!';
+
+                container.innerHTML = `
+                    <div class="completion-card">
+                        <div class="completion-title">Quiz completed</div>
+                        <div class="completion-score">
+                            ${score} / ${total} correct
+                        </div>
+                        <p style="color: #292859; margin-bottom: 2rem; font-size: 1.2rem;">${message}</p>
+                        <button class="restart-btn" id="restartBtn">↻ Try again</button>
+                    </div>
+                `;
+
+                document.getElementById('restartBtn').addEventListener('click', function() {
+                    // reset state
+                    currentIndex = 0;
+                    score = 0;
+                    selectedOption = null;
+                    answered = false;
+                    render();
+                });
+            }
+
+            // ---------- initial render ----------
+            render();
+        })();
+    </script>
+</body>
+</html>
