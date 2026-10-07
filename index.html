@@ -102,14 +102,17 @@
             word-break: break-word;
         }
 
+        /* single, purple, bold blank — only the CSS border draws the line */
         .task-text .blank {
             display: inline-block;
-            min-width: 2.4rem;
-            border-bottom: 3px solid var(--bright-blue);
+            min-width: 3.5rem;
             color: var(--bright-purple);
-            font-weight: 700;
+            font-weight: 800;
             text-align: center;
-            margin: 0 0.15rem;
+            margin: 0 0.25rem;
+            border-bottom: 3px solid var(--bright-purple);
+            height: 1.2em;
+            vertical-align: baseline;
         }
 
         /* ---------- options ---------- */
@@ -122,7 +125,6 @@
 
         .option-btn {
             background: var(--white);
-            border: 2px solid transparent;
             border-radius: 2rem;
             padding: 1rem 1.5rem;
             font-size: 1.2rem;
@@ -169,7 +171,7 @@
 
         .option-btn:disabled {
             cursor: default;
-            opacity: 0.9;
+            opacity: 0.95;
         }
 
         .option-letter {
@@ -237,24 +239,48 @@
         .action-row {
             display: flex;
             justify-content: flex-end;
+            gap: 0.8rem;
             margin-top: 0.8rem;
         }
 
-        .next-btn {
-            background: var(--dark-blue);
-            color: white;
+        .btn {
             border: none;
             border-radius: 3rem;
-            padding: 0.9rem 2.5rem;
+            padding: 0.9rem 2.2rem;
             font-size: 1.1rem;
             font-weight: 600;
             letter-spacing: 0.02em;
             cursor: pointer;
             transition: 0.2s ease;
-            box-shadow: 0 6px 14px rgba(41, 40, 89, 0.2);
             display: inline-flex;
             align-items: center;
             gap: 0.6rem;
+        }
+
+        .check-btn {
+            background: var(--bright-purple);
+            color: white;
+            box-shadow: 0 6px 14px rgba(120, 77, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .check-btn:hover:not(:disabled) {
+            background: #6538e0;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(120, 77, 255, 0.3);
+        }
+
+        .check-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .next-btn {
+            background: var(--dark-blue);
+            color: white;
+            box-shadow: 0 6px 14px rgba(41, 40, 89, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -265,7 +291,7 @@
         }
 
         .next-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.35;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
@@ -336,15 +362,23 @@
                 padding: 0.9rem 1.2rem;
             }
 
-            .next-btn {
-                padding: 0.8rem 1.8rem;
+            .btn {
+                padding: 0.8rem 1.5rem;
                 font-size: 1rem;
+            }
+
+            .action-row {
+                flex-direction: column-reverse;
+            }
+
+            .action-row .btn {
+                width: 100%;
+                justify-content: center;
             }
         }
 
-        /* accessibility outline */
         .option-btn:focus-visible,
-        .next-btn:focus-visible,
+        .btn:focus-visible,
         .restart-btn:focus-visible {
             outline: 3px solid var(--bright-blue);
             outline-offset: 3px;
@@ -352,13 +386,12 @@
     </style>
 </head>
 <body>
-    <div class="quiz-container" id="quizContainer">
-        <!-- dynamic content will be injected here -->
-    </div>
+    <div class="quiz-container" id="quizContainer"></div>
 
     <script>
         (function() {
             // ---------- quiz data ----------
+            // `answer` can be a string OR an array of strings (multiple correct options)
             const questions = [
                 { task: "You have got … money to buy a car.", options: ["Enough", "Too many", "Too much"], answer: "Enough" },
                 { task: "There are … people on the street.", options: ["Too much", "Enough", "Too many"], answer: "Too many" },
@@ -369,19 +402,31 @@
                 { task: "There isn't … popcorn. Let's buy some more!", options: ["Too much", "Enough", "Too many"], answer: "Enough" },
                 { task: "I can't decide what to wear, I have … clothes.", options: ["Too much", "Too many", "Enough"], answer: "Too many" },
                 { task: "They didn't have … time, they worked a lot.", options: ["Too much", "Enough", "Too many"], answer: "Enough" },
-                { task: "My dad bought … vegetables. We made a big salad bowl.", options: ["Too much", "Enough", "Too many"], answer: "Enough" }
+                { task: "My dad bought … vegetables. We made a big salad bowl.", options: ["Too much", "Enough", "Too many"], answer: ["Enough", "Too many"] }
             ];
 
             // ---------- state ----------
-            let currentIndex = 0;                // 0-based index of current question
+            let currentIndex = 0;
             let score = 0;
-            let selectedOption = null;           // currently selected option text (before check)
-            let answered = false;                // whether current question has been checked
+            let selectedOption = null;   // currently selected option (before check)
+            let checked = false;         // has the current question been checked?
+            let wasCorrect = false;      // was the checked answer correct?
 
-            // DOM elements
             const container = document.getElementById('quizContainer');
 
-            // ---------- helper: render current state ----------
+            // helper: normalise answer to array
+            function correctAnswers(q) {
+                return Array.isArray(q.answer) ? q.answer : [q.answer];
+            }
+
+            // helper: pretty-print correct answer(s) for feedback
+            function correctAnswerText(q) {
+                const arr = correctAnswers(q);
+                if (arr.length === 1) return `“${arr[0]}”`;
+                return arr.map(a => `“${a}”`).join(' or ');
+            }
+
+            // ---------- render current question ----------
             function render() {
                 if (currentIndex >= questions.length) {
                     renderCompletion();
@@ -391,8 +436,8 @@
                 const q = questions[currentIndex];
                 const total = questions.length;
                 const questionNumber = currentIndex + 1;
+                const correctSet = correctAnswers(q);
 
-                // build HTML
                 let html = `
                     <div class="quiz-header">
                         <div class="progress-badge">
@@ -404,28 +449,25 @@
                     </div>
                     <div class="question-card">
                         <div class="task-text">
-                            ${q.task.replace(/…/g, '<span class="blank">______</span>')}
+                            ${q.task.replace(/…/g, '<span class="blank">&nbsp;</span>')}
                         </div>
                         <div class="options-list" id="optionsList">
                 `;
 
-                // options
                 q.options.forEach((opt, idx) => {
-                    const letter = String.fromCharCode(65 + idx); // A, B, C
+                    const letter = String.fromCharCode(65 + idx);
                     let btnClass = 'option-btn';
-                    if (answered) {
-                        // highlight correct / wrong after checking
-                        if (opt === q.answer) {
+                    if (checked) {
+                        // highlight correct options (all accepted) in green
+                        if (correctSet.includes(opt)) {
                             btnClass += ' correct';
-                        } else if (opt === selectedOption && opt !== q.answer) {
+                        } else if (opt === selectedOption && !correctSet.includes(opt)) {
                             btnClass += ' wrong';
                         }
-                    } else {
-                        if (opt === selectedOption) {
-                            btnClass += ' selected';
-                        }
+                    } else if (opt === selectedOption) {
+                        btnClass += ' selected';
                     }
-                    const disabledAttr = answered ? 'disabled' : '';
+                    const disabledAttr = checked ? 'disabled' : '';
                     html += `
                         <button class="${btnClass}" data-option="${opt}" ${disabledAttr}>
                             <span class="option-letter">${letter}</span>
@@ -440,7 +482,8 @@
                             <div class="feedback-message" id="feedbackMessage"></div>
                         </div>
                         <div class="action-row">
-                            <button class="next-btn" id="nextBtn" ${!answered ? 'disabled' : ''}>
+                            <button class="btn check-btn" id="checkBtn" disabled>✓ Check</button>
+                            <button class="btn next-btn" id="nextBtn" disabled>
                                 ${currentIndex === total - 1 ? 'Finish' : 'Next'} <span class="arrow">→</span>
                             </button>
                         </div>
@@ -449,85 +492,94 @@
 
                 container.innerHTML = html;
 
-                // attach event listeners after render
+                // grab elements
                 const optionButtons = document.querySelectorAll('.option-btn');
+                const checkBtn = document.getElementById('checkBtn');
                 const nextBtn = document.getElementById('nextBtn');
                 const feedbackMessage = document.getElementById('feedbackMessage');
-                const feedbackArea = document.getElementById('feedbackArea');
 
-                // if already answered, set feedback message
-                if (answered) {
-                    const isCorrect = selectedOption === q.answer;
-                    feedbackMessage.textContent = isCorrect
+                // if already checked, restore state
+                if (checked) {
+                    feedbackMessage.textContent = wasCorrect
                         ? '✓ Correct! Well done.'
-                        : `✗ Not quite. The correct answer is “${q.answer}”.`;
-                    feedbackMessage.className = `feedback-message show ${isCorrect ? 'correct-feedback' : 'wrong-feedback'}`;
-
-                    // enable next button
+                        : `✗ Not quite. The correct answer is ${correctAnswerText(q)}.`;
+                    feedbackMessage.className = `feedback-message show ${wasCorrect ? 'correct-feedback' : 'wrong-feedback'}`;
                     nextBtn.disabled = false;
                 } else {
-                    feedbackMessage.className = 'feedback-message';
-                    feedbackMessage.textContent = '';
+                    // enable Check button only when an option is selected
+                    checkBtn.disabled = (selectedOption === null);
                 }
 
-                // ----- option click handler -----
+                // option click handler (only if not checked)
                 optionButtons.forEach(btn => {
-                    btn.addEventListener('click', function(e) {
-                        if (answered) return; // already locked
-
+                    btn.addEventListener('click', function() {
+                        if (checked) return;
                         const chosen = this.dataset.option;
 
-                        // if same option clicked again, deselect (toggle)
                         if (selectedOption === chosen) {
+                            // deselect
                             selectedOption = null;
-                            // remove selected class from all
                             optionButtons.forEach(b => b.classList.remove('selected'));
                         } else {
-                            // remove selected from all, add to this
                             optionButtons.forEach(b => b.classList.remove('selected'));
                             this.classList.add('selected');
                             selectedOption = chosen;
                         }
 
-                        // enable/disable next button based on selection
-                        if (selectedOption) {
-                            nextBtn.disabled = false;
-                        } else {
-                            nextBtn.disabled = true;
-                        }
+                        // update Check button state
+                        checkBtn.disabled = (selectedOption === null);
                     });
                 });
 
-                // ----- next button handler (check answer & move forward) -----
+                // ----- CHECK button -----
+                checkBtn.addEventListener('click', function() {
+                    if (checked || !selectedOption) return;
+
+                    const correctSet = correctAnswers(q);
+                    wasCorrect = correctSet.includes(selectedOption);
+                    if (wasCorrect) score++;
+
+                    checked = true;
+
+                    // visually update the selected option + show feedback without full re-render
+                    optionButtons.forEach(btn => {
+                        btn.disabled = true;
+                        const opt = btn.dataset.option;
+                        if (correctSet.includes(opt)) {
+                            btn.classList.add('correct');
+                            btn.classList.remove('selected');
+                        } else if (opt === selectedOption) {
+                            btn.classList.add('wrong');
+                            btn.classList.remove('selected');
+                        }
+                    });
+
+                    feedbackMessage.textContent = wasCorrect
+                        ? '✓ Correct! Well done.'
+                        : `✗ Not quite. The correct answer is ${correctAnswerText(q)}.`;
+                    feedbackMessage.className = `feedback-message show ${wasCorrect ? 'correct-feedback' : 'wrong-feedback'}`;
+
+                    // update score badge live
+                    const scoreBadge = document.querySelector('.score-badge');
+                    if (scoreBadge) scoreBadge.textContent = `⭐ Score: ${score}`;
+
+                    // enable Next, disable Check
+                    checkBtn.disabled = true;
+                    nextBtn.disabled = false;
+                });
+
+                // ----- NEXT button -----
                 nextBtn.addEventListener('click', function() {
-                    // if already answered, go to next question
-                    if (answered) {
-                        currentIndex++;
-                        selectedOption = null;
-                        answered = false;
-                        render();
-                        return;
-                    }
-
-                    // not answered yet: we need to check the answer
-                    if (!selectedOption) return; // disabled anyway
-
-                    const isCorrect = (selectedOption === q.answer);
-                    if (isCorrect) {
-                        score++;
-                    }
-
-                    // mark as answered
-                    answered = true;
-
-                    // re-render to show correct/wrong styles and feedback
+                    if (!checked) return;
+                    currentIndex++;
+                    selectedOption = null;
+                    checked = false;
+                    wasCorrect = false;
                     render();
-
-                    // now after re-render, the next button is enabled, and feedback is displayed
                 });
             }
 
-            // ---------- render completion screen ----------
+            // ---------- completion ----------
             function renderCompletion() {
                 const total = questions.length;
                 const percentage = Math.round((score / total) * 100);
@@ -540,25 +592,23 @@
                 container.innerHTML = `
                     <div class="completion-card">
                         <div class="completion-title">Quiz completed</div>
-                        <div class="completion-score">
-                            ${score} / ${total} correct
-                        </div>
+                        <div class="completion-score">${score} / ${total} correct</div>
                         <p style="color: #292859; margin-bottom: 2rem; font-size: 1.2rem;">${message}</p>
                         <button class="restart-btn" id="restartBtn">↻ Try again</button>
                     </div>
                 `;
 
                 document.getElementById('restartBtn').addEventListener('click', function() {
-                    // reset state
                     currentIndex = 0;
                     score = 0;
                     selectedOption = null;
-                    answered = false;
+                    checked = false;
+                    wasCorrect = false;
                     render();
                 });
             }
 
-            // ---------- initial render ----------
+            // initial render
             render();
         })();
     </script>
